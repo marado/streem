@@ -1,5 +1,8 @@
 # Streem - stream based concurrent scripting language
 
+[![Build Status](https://travis-ci.org/matz/streem.svg?branch=master)](https://travis-ci.org/matz/streem)
+[![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/matz/streem?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Streem is a concurrent scripting language based on a programming model
 similar to shell, with influences from Ruby, Erlang and other
 functional programming languages.
@@ -10,7 +13,12 @@ In Streem, a simple `cat` program looks like this:
 STDIN | STDOUT
 ```
 
-And a simple FizzBuzz will look like this:
+Streem is a (sort of) DSL for data flows.  Above code means
+building data-flow connection between `STDIN` and `STDOUT`.
+Actual data processing will be done in the event loop
+invoked after program execution.
+
+For another example, a simple FizzBuzz will look like this:
 
 ```
 seq(100) | {|x|
@@ -29,6 +37,10 @@ seq(100) | {|x|
 } | STDOUT
 ```
 
+The second part in the pipeline (`{|x|...}`) is a function
+object.  If a function object is connected in the pipeline,
+it will be invoked for each elements in the stream.
+
 # Note
 
 Streem is still in the design stage. It's not working yet.  Stay tuned.
@@ -42,7 +54,6 @@ Streem is still in the design stage. It's not working yet.  Stay tuned.
 # How to compile
 
 ```
-cd src
 make
 ```
 

@@ -1,11 +1,12 @@
 /*
-** parse.y - stream parser
+** parse.y - streem parser
 **
-** See Copyright Notice in stream.h
+** See Copyright Notice in LICENSE file.
 */
 
 %{
 typedef struct parser_state {
+  int nerr;
   void *lval;
 } parser_state;
 
@@ -35,8 +36,8 @@ static void yyerror(parser_state *p, const char *s);
         keyword_nil
         keyword_true
         keyword_false
-	op_lasgn
-	op_rasgn
+        op_lasgn
+        op_rasgn
         op_plus
         op_minus
         op_mult
@@ -54,9 +55,9 @@ static void yyerror(parser_state *p, const char *s);
         op_amper
 
 %token
-	lit_number
-	lit_string
-	identifier
+        lit_number
+        lit_string
+        identifier
 
 /*
  * precedence table
@@ -152,12 +153,13 @@ primary         : lit_number
                 | primary '.' identifier '(' opt_args ')'
                 | primary '.' identifier
                 | keyword_if expr '{' compstmt '}' opt_else
-		| keyword_nil
-		| keyword_true
-		| keyword_false
+                | keyword_nil
+                | keyword_true
+                | keyword_false
                 ;
 
-map             : expr ':' expr
+map             : lit_string ':' expr
+                | identifier ':' expr
                 ;
 
 map_args        : map
@@ -196,18 +198,40 @@ term            : ';' {yyerrok;}
 static void
 yyerror(parser_state *p, const char *s)
 {
+  p->nerr++;
   fprintf(stderr, "%s\n", s);
+}
+
+static int
+syntax_check(const char* fname)
+{
+  int n;
+  parser_state state = {0, NULL};
+
+  yyin = fopen(fname, "r");
+
+  n = yyparse(&state);
+  fclose(yyin);
+  if (n == 0 && state.nerr == 0) {
+    printf("%s: Syntax OK\n", fname);
+    return 0;
+  }
+  else {
+    printf("%s: Syntax NG\n", fname);
+    return 1;
+  }
 }
 
 int
 main(int argc, const char**argv)
 {
-  int n;
+  int i, n = 0;
 
-  //  yydebug = 1;
-  n = yyparse(NULL);
-  if (n == 0) {
-    printf("Syntax OK\n");
+  // yydebug = 1;
+  for (i=1; i<argc; i++) {
+    n += syntax_check(argv[i]);
   }
+
+  if (n > 0) return 1;
   return 0;
 }
