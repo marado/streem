@@ -8,6 +8,9 @@
 typedef struct parser_state {
   int nerr;
   void *lval;
+  const char *fname;
+  int lineno;
+  int tline;
 } parser_state;
 
 #define YYDEBUG 1
@@ -21,9 +24,10 @@ typedef struct parser_state {
 
 %pure-parser
 %parse-param {parser_state *p}
+%lex-param {p}
 
 %{
-int yylex(YYSTYPE*);
+int yylex(YYSTYPE *yylval, parser_state *p);
 static void yyerror(parser_state *p, const char *s);
 %}
 
@@ -199,19 +203,23 @@ static void
 yyerror(parser_state *p, const char *s)
 {
   p->nerr++;
-  fprintf(stderr, "%s\n", s);
+  if (p->fname) {
+    fprintf(stderr, "%s:%d:%s\n", p->fname, p->lineno, s);
+  }
+  else {
+    fprintf(stderr, "%s\n", s);
+  }
 }
 
 static int
-syntax_check(const char* fname)
+syntax_check(FILE *f, const char *fname)
 {
+  parser_state state = {0, NULL, fname, 1, 1};
   int n;
-  parser_state state = {0, NULL};
 
-  yyin = fopen(fname, "r");
-
+  yyin = f;
   n = yyparse(&state);
-  fclose(yyin);
+
   if (n == 0 && state.nerr == 0) {
     printf("%s: Syntax OK\n", fname);
     return 0;
@@ -222,14 +230,34 @@ syntax_check(const char* fname)
   }
 }
 
+static int
+syntax_check_file(const char* fname)
+{
+  int n;
+  FILE *f = fopen(fname, "r");
+
+  if (f == NULL) {
+    fprintf(stderr, "failed to open file: %s\n", fname);
+    return 1;
+  }
+  n = syntax_check(f, fname);
+  fclose(f);
+  return n;
+}
+
 int
 main(int argc, const char**argv)
 {
   int i, n = 0;
 
   // yydebug = 1;
-  for (i=1; i<argc; i++) {
-    n += syntax_check(argv[i]);
+  if (argc == 1) {              /* no args */
+    n = syntax_check(stdin, "stdin");
+  }
+  else {
+    for (i=1; i<argc; i++) {
+      n += syntax_check_file(argv[i]);
+    }
   }
 
   if (n > 0) return 1;
